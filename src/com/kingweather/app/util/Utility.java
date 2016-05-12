@@ -10,7 +10,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+
 import com.kingweather.app.model.LocationInfo;
+import com.kingweather.app.model.WeatherInfo;
 
 
 public class Utility {
@@ -50,5 +54,61 @@ public class Utility {
 			return locations;
 		}
 	}
+	
+	public static void handleWeatherJson(Context context, String repsonse){
+		try {
+			JSONObject json = new JSONObject(repsonse);
+			
+			if(json.getString("errMsg").equals("success")){
+				JSONObject weatherJson = json.getJSONObject("retData");
+				
+				String description = weatherJson.getString("weather");
+				String temp1 = weatherJson.getString("l_tmp");
+				String temp2 = weatherJson.getString("h_tmp");
+				String date = weatherJson.getString("date") + weatherJson.getString("time");
+				String name = weatherJson.getString("city");
+				String code = weatherJson.getString("citycode");
+				saveWeatherInfo(context, name, description, temp1, temp2, date, code);
+			}
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static void saveWeatherInfo(Context context, 
+										String locationName, 
+										String description,
+										String temp1, 
+										String temp2,
+										String date,
+										String code){
+		SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
+		editor.putBoolean("isSelectedLocation", true);
+		editor.putString("locationName", locationName);
+		editor.putString("description", description);
+		editor.putString("temp1", temp1);
+		editor.putString("temp2", temp2);
+		editor.putString("updataDate", date);
+		editor.putString("code", code);
+		
+		editor.commit();
+	}
+	
+	public static boolean isSelectedLocation(Context context){
+		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+		return sp.getBoolean("isSelectedLocation", false);
+	}
+	
+	public static WeatherInfo getWeatherInfo(Context context){
+		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+		return new WeatherInfo(sp.getString("locationName", "null"), 
+				sp.getString("temp1", "null"), 
+				sp.getString("temp2", "null"), 
+				sp.getString("description", "null"), 
+				sp.getString("code", "null"), 
+				sp.getString("updataDate", "null"));
+	}
 }
+
 

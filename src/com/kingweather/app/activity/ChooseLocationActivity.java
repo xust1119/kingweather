@@ -16,27 +16,28 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
-public class ChooseLocationActivity extends Activity implements OnClickListener {
+public class ChooseLocationActivity extends Activity{
 	public static final String LOCATIONNAME = "location";
 	private ListView listView;
-	private Button okButton;
 	private ProgressDialog progressDialog;
 	private String locationName;
+	private List<LocationInfo> locationinfos;
 	
 	private void init(){
 		listView = (ListView)findViewById(R.id.locationsListView);
-		okButton = (Button)findViewById(R.id.chooseLocationBtn);
 		locationName = getIntent().getExtras().getString(LOCATIONNAME);
 		
-		okButton.setOnClickListener(this);
 	}
 	
 	private void initListView(List<LocationInfo> infos){
+		locationinfos = infos;
 		String[] strInfos = new String[infos.size()];
 		for(int i = 0; i < infos.size(); ++i){
 			strInfos[i] = infos.get(i).toString();
@@ -44,26 +45,43 @@ public class ChooseLocationActivity extends Activity implements OnClickListener 
 		
 		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, strInfos);
 		listView.setAdapter(adapter);
+		
+		listView.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> arg0, View v, int index,
+					long arg3) {
+				LocationInfo selectedLocation = locationinfos.get(index);
+				Intent i = new Intent();
+				i.putExtra("selectItemCode", selectedLocation.getId());
+				i.putExtra("selectedItemName", selectedLocation.toString());
+				setResult(RESULT_OK, i);
+				finish();
+			}
+		});
 	}
 	
 	private void queryFromHttp(String name){
 		showProgressDialog();
 		String address = "http://apis.baidu.com/apistore/weatherservice/citylist?cityname=" + name;
 		
-		Log.d("MyTag", address);
 		HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
 			@Override
 			public void onFinish(final String response) {
 				// TODO Auto-generated method stub
-				Log.d("MyTag", "in onFinish~~~");
-				Log.d("MyTag", response.toString());
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
 						// TODO Auto-generated method stub
 						List<LocationInfo> infos = Utility.handleLocationResponse(response);
-						initListView(infos);
 						closeProgressDialog();
+						
+						if(infos.size() == 0){
+							Toast.makeText(ChooseLocationActivity.this, "无法查询到输入的地点，请检查！", Toast.LENGTH_SHORT).show();
+							finish();
+						}
+						else{
+							initListView(infos);
+						}
 					}
 				});
 				
@@ -94,12 +112,6 @@ public class ChooseLocationActivity extends Activity implements OnClickListener 
 		
 		init();
 		queryFromHttp(locationName);
-	}
-
-	@Override
-	public void onClick(View v) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	public void showProgressDialog(){
